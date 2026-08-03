@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ريحان وكنز القراصنة 🏴‍☠️</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@500;700;800&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --deep:#063a52;
+    --mid:#0b6386;
+    --shallow:#4fc3d9;
+    --sand:#f7d98c;
+    --coral:#ff6f5e;
+    --cream:#fff7e8;
+    --ink:#06222f;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    margin:0; height:100%;
+    overflow:hidden;
+    font-family:'Tajawal', sans-serif;
+    background:var(--deep);
+    touch-action:manipulation;
+    user-select:none;
+  }
+
+  .stage{
+    position:relative;
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  #gameCanvas{
+    background:linear-gradient(180deg, var(--shallow) 0%, var(--mid) 55%, var(--deep) 100%);
+    display:block;
+    width:100%; height:100%;
+    max-width:480px;
+    touch-action:manipulation;
+  }
+
+  .hud{
+    position:absolute; top:16px; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:0 18px;
+    pointer-events:none;
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    z-index:3;
+  }
+  .score-pill{
+    background:rgba(6,34,47,0.55);
+    border:2px solid var(--sand);
+    color:var(--cream);
+    padding:6px 16px;
+    border-radius:999px;
+    font-size:20px;
+    font-weight:700;
+    backdrop-filter:blur(3px);
+  }
+  .best-pill{
+    background:rgba(6,34,47,0.4);
+    color:var(--sand);
+    padding:6px 14px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:500;
+  }
+
+  .bubble{
+    position:absolute;
+    top:70px; left:50%;
+    transform:translateX(-50%) scale(0.8);
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    padding:8px 18px;
+    border-radius:16px;
+    box-shadow:0 6px 0 rgba(0,0,0,0.15);
+    opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:4;
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  .bubble::after{
+    content:"";
+    position:absolute; bottom:-9px; left:50%;
+    transform:translateX(-50%);
+    border-width:9px 8px 0 8px;
+    border-style:solid;
+    border-color:var(--cream) transparent transparent transparent;
+  }
+  .bubble.show{ opacity:1; transform:translateX(-50%) scale(1); }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    background:radial-gradient(ellipse at 50% 20%, rgba(79,195,217,0.35), transparent 60%), rgba(6,20,28,0.72);
+    backdrop-filter:blur(2px);
+    z-index:5;
+    padding:24px;
+  }
+  .overlay.hidden{ display:none; }
+
+  .title-emoji{ font-size:56px; margin-bottom:6px; filter:drop-shadow(0 6px 10px rgba(0,0,0,0.35)); }
+
+  h1{
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    font-weight:800;
+    font-size:clamp(26px, 7vw, 34px);
+    color:var(--sand);
+    margin:0 0 6px;
+    text-shadow:0 3px 0 rgba(0,0,0,0.25);
+  }
+
+  .subtitle{
+    font-size:16px;
+    color:var(--cream);
+    margin:0 0 26px;
+    max-width:320px;
+    line-height:1.7;
+  }
+
+  .go-title{
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    font-weight:800;
+    font-size:22px;
+    color:var(--coral);
+    margin:0 0 8px;
+    max-width:320px;
+  }
+
+  .go-score{
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    color:var(--cream);
+    font-size:34px;
+    font-weight:700;
+    margin:6px 0 2px;
+  }
+  .go-best{
+    color:var(--sand);
+    font-size:14px;
+    margin-bottom:22px;
+  }
+
+  button{
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    font-weight:700;
+    font-size:19px;
+    border:none;
+    background:var(--coral);
+    color:var(--cream);
+    padding:14px 38px;
+    border-radius:999px;
+    box-shadow:0 6px 0 #c94636;
+    cursor:pointer;
+    transition:transform .1s ease;
+  }
+  button:active{ transform:translateY(4px); box-shadow:0 2px 0 #c94636; }
+
+  .hint{
+    margin-top:18px;
+    font-size:13px;
+    color:var(--shallow);
+    opacity:.85;
+  }
+
+  .pirate-row{
+    display:flex; gap:10px; justify-content:center;
+    margin-bottom:4px;
+    font-size:34px;
+  }
+  .pirate-row span{
+    display:inline-block;
+    animation:bouncePirate 0.9s ease-in-out infinite;
+  }
+  .pirate-row span:nth-child(2){ animation-delay:.15s; }
+  .pirate-row span:nth-child(3){ animation-delay:.3s; }
+  .pirate-row span:nth-child(4){ animation-delay:.45s; }
+  @keyframes bouncePirate{
+    0%,100%{ transform:translateY(0); }
+    50%{ transform:translateY(-10px); }
+  }
+
+  .confetti{
+    position:absolute;
+    font-size:20px;
+    top:-30px;
+    animation:fall 2.8s ease-in forwards;
+    z-index:5;
+    pointer-events:none;
+  }
+  @keyframes fall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(90vh) rotate(360deg); opacity:0; }
+  }
+
+  .habib-wrap{
+    display:flex; flex-direction:column; align-items:center;
+    margin:6px 0 16px;
+  }
+  .habib-name{
+    font-family:'Baloo Bhaijaan 2', sans-serif;
+    font-size:13px;
+    color:var(--sand);
+    margin-top:4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <canvas id="gameCanvas" width="400" height="700"></canvas>
+
+  <div class="hud">
+    <div class="score-pill" id="scoreLabel">0</div>
+    <div class="best-pill" id="bestLabel">أفضل: 0</div>
+  </div>
+
+  <div class="bubble" id="bubble">مرحبًا يا ريحان! 🐠</div>
+
+  <div class="overlay" id="startScreen">
+    <div class="title-emoji">🏴‍☠️🐠</div>
+    <h1>ريحان وكنز القراصنة</h1>
+    <p class="subtitle">اضغطي على الشاشة عشان تسبحي لأعلى، وتفادي الشعاب المرجانية المزعجة، واجمعي اللآلئ عشان توصلي لكنز القراصنة الكبير! 💎</p>
+    <button onclick="startGame()">يلا نبدأ! 🚀</button>
+    <div class="hint">اضغطي في أي مكان بالشاشة للسباحة لأعلى</div>
+  </div>
+
+  <div class="overlay hidden" id="gameOverScreen">
+    <div class="title-emoji" id="goEmoji">🦀</div>
+    <div class="go-title" id="goMessage">أمسكك كركند مقلقل!</div>
+    <div class="go-score" id="finalScore">0</div>
+    <div class="go-best" id="finalBest">أفضل نتيجة: 0</div>
+    <button onclick="startGame()">حاولي مرة ثانية! 🔁</button>
+  </div>
+
+  <div class="overlay hidden" id="winScreen">
+    <div class="pirate-row">
+      <span>🏴‍☠️</span><span>🎉</span><span>💰</span><span>🦜</span>
+    </div>
+    <h1>وصلتِ لكنز الـ 20 يا ريحان! 🏆</h1>
+    <div class="habib-wrap">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <path d="M20 46 C 20 20, 100 20, 100 46 L 100 40 C 60 30, 60 30, 20 40 Z" fill="#ff6f5e"/>
+        <path d="M18 40 Q 10 44 14 54 Q 20 50 24 42 Z" fill="#ff6f5e"/>
+        <circle cx="30" cy="34" r="4" fill="#fff7e8"/>
+        <circle cx="60" cy="66" r="38" fill="#f6d9b8"/>
+        <path d="M24 52 C 26 28, 94 28, 96 52 C 88 44, 32 44, 24 52 Z" fill="#141414"/>
+        <circle cx="42" cy="64" r="13" fill="none" stroke="#141414" stroke-width="4"/>
+        <circle cx="78" cy="64" r="13" fill="none" stroke="#141414" stroke-width="4"/>
+        <line x1="55" y1="64" x2="65" y2="64" stroke="#141414" stroke-width="4"/>
+        <path d="M37 62 Q42 58 47 62" stroke="#141414" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M73 62 Q78 58 83 62" stroke="#141414" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse class="tear" cx="40" cy="80" rx="3.5" ry="6" fill="#4fc3d9"/>
+        <ellipse class="tear" cx="80" cy="80" rx="3.5" ry="6" fill="#4fc3d9"/>
+        <path d="M46 88 Q60 102 74 88" stroke="#141414" stroke-width="3.5" fill="#c94636" stroke-linecap="round"/>
+      </svg>
+      <div class="habib-name">حبيب يبكي فخرًا... أو من الغيظ 😭😆</div>
+    </div>
+    <p class="subtitle" id="winMessage">القراصنة يحتفلون بك يا بطلة! ريحان ملكة كنز البحر!</p>
+    <button onclick="startGame()">العب مرة ثانية! 🔁</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const scoreLabel = document.getElementById('scoreLabel');
+const bestLabel = document.getElementById('bestLabel');
+const bubble = document.getElementById('bubble');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const winScreen = document.getElementById('winScreen');
+
+let bestScore = 0;
+try{
+  bestScore = parseInt(localStorage.getItem('reyhan_best_score') || '0', 10);
+}catch(e){ bestScore = 0; }
+bestLabel.textContent = "أفضل: " + bestScore;
+
+let audioCtx = null;
+function beep(freq, dur, type){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.value = 0.06;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.stop(audioCtx.currentTime + dur);
+  }catch(e){}
+}
+
+const passCaptions = [
+  "أحسنتِ يا ريحان! 🐚","سباحة زي المحترفين! 🏊‍♀️","القرش معجب فيكِ! 🦈👍",
+  "مرجان مين؟ ما شفته! 😎","سرعة صاروخ! 🚀","القراصنة يصفقون لك! 👏",
+  "حبيب يقول: بطيئة شوي يا ريحان! 😜","حبيب متفاجئ إنك وصلتي لهنا! 🤭","حبيب يشجعك... بصوت واطي 😏"
+];
+const pearlCaptions = [
+  "لؤلؤة إضافية! ✨","القرش يقول: خدي كمان! 🦈","الكنز يقترب! 💰",
+  "حبيب يقول: هذا سهل صدفة! 😝"
+];
+const gameOverSets = [
+  { emoji:"🦀", text:"أمسكك كركند مقلقل!" },
+  { emoji:"🐡", text:"سمكة منتفخة صدمتك ضحكًا!" },
+  { emoji:"🦑", text:"أخطبوط شقي سحبك من ذيلك!" },
+  { emoji:"🦈", text:"قرش نايم قاطع طريقك بالغلط!" },
+  { emoji:"🪨", text:"اصطدمتِ بصخرة تتظاهر أنها مرجان!" },
+  { emoji:"😝", text:"حبيب قال بيصير! وصار!" },
+  { emoji:"🤪", text:"حبيب يضحك عليكِ من بعيد!" }
+];
+const winMessages = [
+  "القراصنة يحتفلون بك يا بطلة! ريحان ملكة كنز البحر!",
+  "حبيب ما يصدق إنك وصلتي 20! افتخري بنفسك! 🎊",
+  "حتى الكابتن كركند صفّق لك من تحت الماء! 🦀👏"
+];
+
+const WIN_SCORE = 20;
+
+function showBubble(text){
+  bubble.textContent = text;
+  bubble.classList.add('show');
+  clearTimeout(showBubble._t);
+  showBubble._t = setTimeout(()=> bubble.classList.remove('show'), 1000);
+}
+
+let player, obstacles, pearls, bubbles, score, running, frame;
+
+function resetState(){
+  player = { x: 90, y: H/2, vy: 0, r: 20, rot:0 };
+  obstacles = [];
+  pearls = [];
+  bubbles = [];
+  score = 0;
+  frame = 0;
+  running = true;
+  scoreLabel.textContent = "0";
+  for(let i=0;i<18;i++){
+    bubbles.push({ x: Math.random()*W, y: Math.random()*H, r: 2+Math.random()*4, speed: 0.4+Math.random()*0.8 });
+  }
+  spawnObstacle(W + 100);
+  spawnObstacle(W + 460);
+  spawnObstacle(W + 820);
+}
+
+const GAP = 210;
+const OBSTACLE_SPEED = 2.5;
+const GRAVITY = 0.42;
+const FLAP = -7.6;
+
+function spawnObstacle(x){
+  const margin = 90;
+  const gapY = margin + Math.random()*(H - margin*2 - GAP);
+  const hasPearl = Math.random() > 0.35;
+  obstacles.push({
+    x, gapY, passed:false,
+    pearl: hasPearl ? { x: x + 26, y: gapY + GAP/2, taken:false } : null
+  });
+}
+
+function flap(){
+  if(!running) return;
+  player.vy = FLAP;
+  beep(520, 0.08, 'triangle');
+}
+
+function spawnConfetti(){
+  const emojis = ["🎉","💰","🪙","⭐","🫧","🦜"];
+  const stage = document.querySelector('.stage');
+  for(let i=0;i<20;i++){
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    el.style.left = Math.random()*100+'%';
+    el.style.animationDelay = (Math.random()*0.7)+'s';
+    stage.appendChild(el);
+    setTimeout(()=> el.remove(), 3600);
+  }
+}
+
+function winGame(){
+  running = false;
+  if(score > bestScore){
+    bestScore = score;
+    try{ localStorage.setItem('reyhan_best_score', String(bestScore)); }catch(e){}
+  }
+  bestLabel.textContent = "أفضل: " + bestScore;
+  document.getElementById('winMessage').textContent = winMessages[Math.floor(Math.random()*winMessages.length)];
+  winScreen.classList.remove('hidden');
+  spawnConfetti();
+  beep(700,0.15,'sine');
+  setTimeout(()=>beep(900,0.15,'sine'), 150);
+  setTimeout(()=>beep(1100,0.25,'sine'), 300);
+}
+
+function endGame(collidedType){
+  running = false;
+  if(score > bestScore){
+    bestScore = score;
+    try{ localStorage.setItem('reyhan_best_score', String(bestScore)); }catch(e){}
+  }
+  beep(140, 0.35, 'sawtooth');
+
+  const set = gameOverSets[Math.floor(Math.random()*gameOverSets.length)];
+  document.getElementById('goEmoji').textContent = set.emoji;
+  document.getElementById('goMessage').textContent = set.text;
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalBest').textContent = "أفضل نتيجة: " + bestScore;
+  bestLabel.textContent = "أفضل: " + bestScore;
+  gameOverScreen.classList.remove('hidden');
+}
+
+function update(){
+  frame++;
+  player.vy += GRAVITY;
+  player.y += player.vy;
+  player.rot = Math.max(-0.4, Math.min(0.9, player.vy / 12));
+
+  if(player.y - player.r < 0){ player.y = player.r; player.vy = 0; }
+  if(player.y + player.r > H){
+    endGame('floor');
+    return;
+  }
+
+  bubbles.forEach(b=>{
+    b.y -= b.speed;
+    if(b.y < -10){ b.y = H + 10; b.x = Math.random()*W; }
+  });
+
+  for(let i = obstacles.length - 1; i >= 0; i--){
+    const o = obstacles[i];
+    o.x -= OBSTACLE_SPEED;
+
+    const topRect = { x:o.x-28, y:0, w:56, h:o.gapY };
+    const botRect = { x:o.x-28, y:o.gapY+GAP, w:56, h:H-(o.gapY+GAP) };
+
+    if(circleRectHit(player, topRect) || circleRectHit(player, botRect)){
+      endGame('obstacle');
+      return;
+    }
+
+    if(!o.passed && o.x < player.x){
+      o.passed = true;
+      score++;
+      scoreLabel.textContent = score;
+      if(score >= WIN_SCORE){ winGame(); return; }
+      showBubble(passCaptions[Math.floor(Math.random()*passCaptions.length)]);
+      beep(720, 0.1, 'sine');
+    }
+
+    if(o.pearl && !o.pearl.taken){
+      const dx = player.x - o.pearl.x, dy = player.y - o.pearl.y;
+      if(Math.sqrt(dx*dx+dy*dy) < player.r + 12){
+        o.pearl.taken = true;
+        score += 3;
+        scoreLabel.textContent = score;
+        if(score >= WIN_SCORE){ winGame(); return; }
+        showBubble(pearlCaptions[Math.floor(Math.random()*pearlCaptions.length)]);
+        beep(980, 0.12, 'sine');
+      }
+    }
+
+    if(o.x < -80){ obstacles.splice(i,1); }
+  }
+
+  const last = obstacles[obstacles.length-1];
+  if(last && last.x < W - 360){ spawnObstacle(last.x + 360); }
+}
+
+function circleRectHit(c, r){
+  const cx = Math.max(r.x, Math.min(c.x, r.x + r.w));
+  const cy = Math.max(r.y, Math.min(c.y, r.y + r.h));
+  const dx = c.x - cx, dy = c.y - cy;
+  return (dx*dx + dy*dy) < (c.r*0.75)*(c.r*0.75);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, "#4fc3d9");
+  g.addColorStop(0.55, "#0b6386");
+  g.addColorStop(1, "#063a52");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  bubbles.forEach(b=>{
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+
+  obstacles.forEach(o=>{
+    drawCoral(o.x, 0, o.gapY, true);
+    drawCoral(o.x, o.gapY+GAP, H-(o.gapY+GAP), false);
+    if(o.pearl && !o.pearl.taken){
+      ctx.font = "26px serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🫧", o.pearl.x, o.pearl.y+8);
+    }
+  });
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.rot * 0.6);
+  ctx.font = "40px serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("🐠", 0, 0);
+  ctx.restore();
+
+  ctx.fillStyle = "rgba(4,20,28,0.35)";
+  ctx.fillRect(0, H-14, W, 14);
+}
+
+function drawCoral(x, y, h, isTop){
+  const grad = ctx.createLinearGradient(x-28,0,x+28,0);
+  grad.addColorStop(0, "#e8845f");
+  grad.addColorStop(0.5, "#ff9a6e");
+  grad.addColorStop(1, "#e8845f");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  const rx = x-28, rw=56, radius=14;
+  if(isTop){
+    ctx.moveTo(rx, y);
+    ctx.lineTo(rx+rw, y);
+    ctx.lineTo(rx+rw, y+h-radius);
+    ctx.arcTo(rx+rw, y+h, rx+rw-radius, y+h, radius);
+    ctx.lineTo(rx+radius, y+h);
+    ctx.arcTo(rx, y+h, rx, y+h-radius, radius);
+    ctx.closePath();
+  } else {
+    ctx.moveTo(rx, y+h);
+    ctx.lineTo(rx+rw, y+h);
+    ctx.lineTo(rx+rw, y+radius);
+    ctx.arcTo(rx+rw, y, rx+rw-radius, y, radius);
+    ctx.lineTo(rx+radius, y);
+    ctx.arcTo(rx, y, rx, y+radius, radius);
+    ctx.closePath();
+  }
+  ctx.fill();
+
+  ctx.font = "20px serif";
+  ctx.textAlign = "center";
+  if(isTop){ ctx.fillText("🪸", x, y+h-6); }
+  else{ ctx.fillText("🪸", x, y+22); }
+}
+
+function loop(){
+  if(running){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+}
+
+function startGame(){
+  startScreen.classList.add('hidden');
+  gameOverScreen.classList.add('hidden');
+  winScreen.classList.add('hidden');
+  resetState();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('pointerdown', (e)=>{
+  if(startScreen.classList.contains('hidden') && gameOverScreen.classList.contains('hidden')){
+    flap();
+  }
+});
+window.addEventListener('keydown', (e)=>{
+  if(e.code === 'Space') flap();
+});
+
+draw();
+player = { x: 90, y: H/2, vy:0, r:20, rot:0 };
+obstacles = []; bubbles = [];
+for(let i=0;i<18;i++){
+  bubbles.push({ x: Math.random()*W, y: Math.random()*H, r: 2+Math.random()*4, speed: 0.4+Math.random()*0.8 });
+}
+draw();
+</script>
+
+</body>
+  </html>
